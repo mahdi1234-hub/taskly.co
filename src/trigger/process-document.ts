@@ -38,7 +38,7 @@ export const processDocumentTask = task({
 
       // Generate summary and metadata with AI
       const { text: aiResult } = await generateText({
-        model: cerebras("llama-4-scout-17b-16e-instruct"),
+        model: cerebras("qwen-3-235b-a22b-instruct-2507"),
         prompt: `Analyze this document and return a JSON object with:
 - "summary": a 2-3 sentence summary
 - "category": one of: contract, report, invoice, letter, research, manual, policy, other

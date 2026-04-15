@@ -5,4 +5,7 @@ export const cerebras = createOpenAI({
   baseURL: process.env.CEREBRAS_BASE_URL || "https://api.cerebras.ai/v1",
 });
 
-export const chatModel = cerebras("llama-4-scout-17b-16e-instruct");
+// Available models: qwen-3-235b-a22b-instruct-2507, llama3.1-8b
+export const CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507";
+
+export const chatModel = cerebras(CEREBRAS_MODEL);

@@ -75,7 +75,7 @@ ${memoryContext}
 7. Use **bold** for important values, headers with ## for sections.`;
 
   const result = streamText({
-    model: cerebras("llama-4-scout-17b-16e-instruct"),
+    model: cerebras("qwen-3-235b-a22b-instruct-2507"),
     system: systemPrompt,
     messages,
     maxSteps: 5,
