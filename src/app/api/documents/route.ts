@@ -5,6 +5,17 @@ import { cerebras } from "@/lib/cerebras";
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 
+// Try to import Trigger.dev task for background processing
+let triggerAvailable = false;
+let processDocumentTask: any = null;
+try {
+  const mod = require("@/trigger/process-document");
+  processDocumentTask = mod.processDocumentTask;
+  triggerAvailable = true;
+} catch {
+  // Trigger.dev not available, will use inline processing
+}
+
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json([], { status: 401 });
@@ -43,13 +54,26 @@ export async function POST(req: Request) {
     },
   });
 
-  // Process in background (inline for now, will be Trigger.dev job)
-  processDocument(doc.id, text, session.user.id).catch(console.error);
+  // Use Trigger.dev if available, otherwise process inline
+  if (triggerAvailable && processDocumentTask) {
+    try {
+      await processDocumentTask.trigger({
+        docId: doc.id,
+        text: text.slice(0, 50000), // Limit payload size
+        userId: session.user.id,
+      });
+    } catch {
+      // Fallback to inline processing
+      processDocumentInline(doc.id, text, session.user.id).catch(console.error);
+    }
+  } else {
+    processDocumentInline(doc.id, text, session.user.id).catch(console.error);
+  }
 
   return NextResponse.json(doc);
 }
 
-async function processDocument(docId: string, text: string, userId: string) {
+async function processDocumentInline(docId: string, text: string, userId: string) {
   try {
     const truncatedText = text.slice(0, 8000);
 
@@ -79,23 +103,14 @@ Return ONLY valid JSON, no other text.`,
       summary = aiResult.slice(0, 500);
     }
 
-    // Store in Pinecone under user's docs namespace
     const docVector = generateSimpleVector(text);
     const docsIndex = getDocumentsIndex(userId);
-
     const docTitle = (await prisma.document.findUnique({ where: { id: docId } }))?.title || "";
 
     await docsIndex.upsert([{
       id: docId,
       values: docVector,
-      metadata: {
-        docId,
-        title: docTitle,
-        text: truncatedText.slice(0, 4000),
-        category,
-        tags: tags.join(","),
-        summary,
-      },
+      metadata: { docId, title: docTitle, text: truncatedText.slice(0, 4000), category, tags: tags.join(","), summary },
     }] as any);
 
     await prisma.document.update({
@@ -104,9 +119,6 @@ Return ONLY valid JSON, no other text.`,
     });
   } catch (error) {
     console.error("Document processing error:", error);
-    await prisma.document.update({
-      where: { id: docId },
-      data: { status: "FAILED" },
-    });
+    await prisma.document.update({ where: { id: docId }, data: { status: "FAILED" } });
   }
 }
