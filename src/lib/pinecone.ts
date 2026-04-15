@@ -10,33 +10,27 @@ if (process.env.NODE_ENV !== "production") globalForPinecone.pinecone = pinecone
 
 const INDEX_NAME = process.env.PINECONE_INDEX || "rag-knowledge-base";
 
-/**
- * Get the Pinecone index for document storage.
- * Each user's documents are stored in their own namespace: `docs-{userId}`
- */
+// The index dimension is 384
+export const VECTOR_DIMENSION = 384;
+
 export function getDocumentsIndex(userId: string) {
   return pinecone.index(INDEX_NAME).namespace(`docs-${userId}`);
 }
 
-/**
- * Get the Pinecone index for conversation memory.
- * Each user's conversation memory is in namespace: `memory-{userId}`
- */
 export function getMemoryIndex(userId: string) {
   return pinecone.index(INDEX_NAME).namespace(`memory-${userId}`);
 }
 
 /**
- * Generate a simple vector representation using character frequency.
- * This is a fallback when no embedding model is available.
+ * Generate a vector with dimension matching the Pinecone index (384).
  */
-export function generateSimpleVector(text: string, dim = 1536): number[] {
+export function generateSimpleVector(text: string): number[] {
+  const dim = VECTOR_DIMENSION;
   const vector = new Array(dim).fill(0);
   const normalized = text.toLowerCase();
   for (let i = 0; i < normalized.length; i++) {
     const code = normalized.charCodeAt(i);
     vector[code % dim] += 1;
-    // Add bigram features for better differentiation
     if (i < normalized.length - 1) {
       const bigram = (code * 31 + normalized.charCodeAt(i + 1)) % dim;
       vector[bigram] += 0.5;

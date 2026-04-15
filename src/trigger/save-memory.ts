@@ -3,7 +3,7 @@ import { Pinecone } from "@pinecone-database/pinecone";
 
 const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
 
-function generateSimpleVector(text: string, dim = 1536): number[] {
+function generateSimpleVector(text: string, dim = 384): number[] {
   const vector = new Array(dim).fill(0);
   const normalized = text.toLowerCase();
   for (let i = 0; i < normalized.length; i++) {
